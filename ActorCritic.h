@@ -44,8 +44,8 @@ public:
 		// cout << "in " << run.transpose() << endl;
 		// cout << "target " << target.transpose() << endl;
 		if (PR) {
-			PRMatr.col(1) = run;
-			PRTarget.col(1) = target;
+			PRMatr.col(0) = run;
+			PRTarget.col(0) = target;
 			policy.prBackpropagation(PRMatr, PRactivations, PRTarget, 0.00001);
 		}
 		else {
