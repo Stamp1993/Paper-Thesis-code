@@ -3,7 +3,7 @@
 void learn(bool max, bool fr, string fileadd) {
     
     int averaging = 1;
-	int length = 10000;
+	int length = 1000;
 	double lr = 0.05;
     double df = 0.99;
     double punch = 5;
@@ -17,9 +17,9 @@ void learn(bool max, bool fr, string fileadd) {
     srand(17);
 	{string file1 = (fileadd + "NoPR1ag.csv");
 	cart_pole cp(cartM , pole1M,  pole2M, punch, pole1L, pole2L, 5, failAng);
-	acAgent ag1(1, cp.current, lr, df,   &cp);
+	acAgent ag1(1, cp.current, lr, df, &cp);
 	ag1.epsilon = 0.4;
-	ag1.acLearn(0, 0, fr, length, averaging, file1);
+	ag1.acLearn(0, 0, fr, length*10, averaging, file1);
     }
     cout << "ag1.acLearn(0, 0, fr, length, averaging, file1);" << endl;
      srand(17);

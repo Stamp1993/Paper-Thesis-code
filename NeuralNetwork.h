@@ -399,10 +399,15 @@ struct neuralNetwork {
 				int neurSize = (*layers[l].neurons).size();
 				int weightsSize = (*layers[l].neurons)[0].weights.size();
                 //double theta = acos(prActivations[x][l].dot(activations[l])/(prActivations[x][l].squaredNorm()*activations[l].squaredNorm()))
-				VectorXd bxx = activations[l] * (PRActivations[x][l].dot(PRActivations[x][l]));
-				VectorXd xxb = PRActivations[x][l] * (PRActivations[x][l].dot(activations[l]));
-				VectorXd wght = ((bxx - xxb) / ((activations[l].dot(activations[l]))*(PRActivations[x][l].dot(PRActivations[x][l])) - (activations[l].dot(PRActivations[x][l]))*(activations[l].dot(PRActivations[x][l]))));
-
+				VectorXd wght;
+				if (l < depth) {
+					wght = VectorXd::Ones(weightsSize);
+				}
+				else {
+					VectorXd bxx = activations[l] * (PRActivations[x][l].dot(PRActivations[x][l]));
+					VectorXd xxb = PRActivations[x][l] * (PRActivations[x][l].dot(activations[l]));
+					wght = ((bxx - xxb) / ((activations[l].dot(activations[l]))*(PRActivations[x][l].dot(PRActivations[x][l])) - (activations[l].dot(PRActivations[x][l]))*(activations[l].dot(PRActivations[x][l]))));
+				}
 				for (int j = 0; j < neurSize; j++) {
 
 					VectorXd upd = errb[l + 1][j] * wght;

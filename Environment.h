@@ -173,12 +173,12 @@ public:
             pos += noise();
             vel +=noise();
             acc+=noise();
-			angle1 += noise()*5+1;//pole should start falling
-			angle2 += noise()*5-1;//pole should start falling
-            angVel1 +=noise()*5;
-            angVel2+=noise()*5;
-            angAcc1+=noise()*5;
-            angAcc2+=noise()*5;
+			angle1 += noise()*5-10;//pole should start falling
+			angle2 += noise()*5+10;//pole should start falling
+            angVel1 +=noise()*5+1;
+            angVel2+=noise()*5-1;
+            angAcc1+=noise()*5+1;
+            angAcc2+=noise()*5-1;
 			//value = VectorXd::Zero(6);
 			info = VectorXd::Zero(18);
 			
@@ -365,24 +365,32 @@ public:
         int sing = (vel>0)?1:(vel<0)?-1:0;
 		acc = (punchDone - cartFric*sing + tempMul1 + tempMul2)/(cartM + tempDev1 + tempDev2);
         
-		angAcc1 = -(3.0/(4.0*pole1L))*(acc*cosAn1 + gravAcc*sinAn1 + (poleFric*angVel1)/(pole1M*pole1L));
+		angAcc1 = (3.0/(4.0*pole1L))*(acc*cosAn1 + gravAcc*sinAn1 + (poleFric*angVel1)/(pole1M*pole1L));
         angAcc2 = 0;//-(3.0/(4.0*pole2L))*(acc*cosAn2 + gravAcc*sinAn2 + (poleFric*angVel2)/(pole2M*pole2L));
-
+		
 
 		
 
 		/*** Update the four state variables, using Euler's method. ***/
-
-		pos += timestep * vel;
+		
 		vel += timestep * acc;
+		pos += timestep * vel;
+		angVel1 += timestep * angAcc1;
+		
 		angle1 += timestep * angVel1;
         angle1 = angle1*180/pi;
-		angVel1 += timestep * angAcc1;
-        angVel1 = angVel1*180/pi;
+		angVel2 += timestep * angAcc2;
 		angle2 += timestep * angVel2;
         angle2 = 0;//angle2*180/pi;
-		angVel2 += timestep * angAcc2;
-        angVel2 = 0;//angVel2*180/pi;
+		angVel1 = angVel1 * 180 / pi;
+		angVel2 = 0;//angVel2*180/pi;
+		//cout << "done" << endl;
+		//cout << angAcc1 << endl;
+		//cout << angVel1 << endl;
+		//cout << angle1 << endl;
+		//cout << pos << endl;
+		//cout << vel << endl;
+		//cout << acc<< endl;
 		pole_state res;
 		if ((abs(angle1) > poleFailAng) || (abs(angle2) > poleFailAng) || abs(pos) > track) {
 			res = pole_state(true);
