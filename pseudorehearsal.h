@@ -9,22 +9,22 @@
 using namespace std;
 using namespace Eigen;
 
-static default_random_engine generator;
+
 
 
 
 	static double noise() {
-		normal_distribution<double> distribution(0.0, 2.0);
-		double trash1 = distribution(generator);//first time is the same - some mistake;
-		double result = distribution(generator);
-		return result;
+		//normal_distribution<double> distribution(0.0, 1.0);
+		double result = (rand()%1000);
+        result = result/600;
+		return result*0;
 	}
 
 	static double noise(double in) {
-		normal_distribution<double> distribution(in, 3.0);
-		double trash1 = distribution(generator);//first time is the same - some mistake;
-		double result = distribution(generator);
-		return result;
+		
+		double result = (rand()%1000);
+        result = result/1000;
+        return result*0;
 	}
 
 	static MatrixXd randomPR(int length, VectorXd in) {

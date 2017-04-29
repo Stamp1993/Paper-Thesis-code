@@ -3,9 +3,8 @@
 #include <windows.h>
 #include <string>
 #include <sstream>
-#include <ctime>
 #include <fstream>
-#include "Environment3.h"
+#include "Environment.h"
 using namespace std;
 
 class agent
@@ -23,10 +22,12 @@ public:
 	bool won = false;
 	int goalsRow = 0;
 	int relearn = 1;
-	vector<int> current_time;
-	int startTime, stepTime;
+	vector<double> current_time;
+	double startTime, stepTime;
 	MatrixXd PRMatr;
+   
 	MatrixXd PRTarget;
+   
 	bool PR = false; // if we use pseudorehearsals
 	int PRsize = 0;
 	bool max = true;
@@ -55,10 +56,10 @@ public:
 		relearn = 0;
 		PR = false;
 		PRsize = 0;
-		actionValues = neuralNetwork(currentState.value.size(), learningRate, tang);
+		actionValues = neuralNetwork((&currentState)->value.size(), learningRate, tang);
 		actionValues.addLayer(20);
 		actionValues.addLayer(env->actions.size());
-		policy = neuralNetwork(currentState.value.size(), learningRate, logist);
+		policy = neuralNetwork(currentState.value.size(), learningRate, tang);
 		policy.addLayer(20);
 		policy.addLayer(env->actions.size());
 		epsilon = 0.4;
@@ -81,7 +82,7 @@ public:
 	int actionsNum;
 	state* pointerToState = new state();
 	state currentState = *pointerToState;
-	double temperature = 2; // for softmax
+	double temperature = 0.2; // for softmax
 	action* last;
 	bool learned = false;
 	int epsilons = 0;
@@ -93,7 +94,7 @@ public:
 
 	agent(int sz, state curSt, double LR, double DF, int mt, environment* e)
 		: currentState(curSt)
-		, policy(curSt.value.size(), LR, logist)
+		, policy(curSt.value.size(), LR, tang)
 		, actionValues(curSt.value.size(), LR, tang)
 	{ // constr
 		env = e;
@@ -101,9 +102,9 @@ public:
 		discountingFactor = DF;
 		size = sz;
 		currentMoveType = (moveType)mt;
-		policy.addLayer(70);
+		policy.addLayer(20);
 		policy.addLayer(env->actions.size());
-		actionValues.addLayer(70);
+		actionValues.addLayer(20);
 		actionValues.addLayer(env->actions.size());
 		actionsNum = env->actions.size();
 	}
@@ -178,7 +179,7 @@ public:
 	double greedyMove()
 	{
 
-		VectorXd current = actionValues.run(currentState.norm()); // take entity from policies for current state
+		VectorXd current = actionValues.run((&currentState)->norm()); // take entity from policies for current state
 																 // cout << "predict vec " << current.transpose() << endl;
 		state old = currentState;
 
@@ -229,7 +230,7 @@ public:
 	virtual double policyMove()
 	{ // policy based
 		double chance = gamble();
-		VectorXd current = policy.run(currentState.norm()); // take entity from policies for current state
+		VectorXd current = policy.run((&currentState)->norm()); // take entity from policies for current state
 														   // cout << "predict vec " << current.transpose() << endl;
 		state old = currentState;
 
@@ -237,7 +238,7 @@ public:
 		int actions = current.size();
 
 		current.normalize();
-		chance = chance / current.norm();
+		chance = chance / (&current)->norm();
 		// choose action
 		int i;
 		for (i = 0; i < actions; i++) {
@@ -260,7 +261,7 @@ public:
 		VectorXd chanses(actions);
 		double denominator = 0;
 		double check = 0;
-		VectorXd res = policy.run(currentState.norm());
+		VectorXd res = policy.run((&currentState)->norm());
 		for (int i = 0; i < actions; i++) { // choose probabilities by softmax formula
 			denominator += exp(res[i] / temperature);
 		}
@@ -269,9 +270,9 @@ public:
 			check += chanses[i];
 		}
 		//cout << check << endl;
-		assert((check - 1)<0.01);
+		assert(abs(check - 1)<0.01);
 
-		double dice = gamble() / 1000;
+		double dice = gamble();
 		for (int i = 0; i < actions; i++) { // if gamble < chance - move; else check next variant
 			if (chanses[i] >= dice) {
 
@@ -322,14 +323,14 @@ public:
 
 	void improvement(state last, VectorXd target)
 	{
-		VectorXd run = last.norm();
+		VectorXd run = (&last)->norm();
 	
 		// cout << "in " << run.transpose() << endl;
 		// cout << "target " << target.transpose() << endl;
 		if (PR) {
 			PRMatr.col(0) = run;
 			PRTarget.col(0) = target;
-			actionValues.batchBackpropagation(PRMatr, PRTarget, 0.001);
+			actionValues.batchBackpropagation(PRMatr, PRTarget, 0.0001);
 		}
 		else {
 			actionValues.backpropagation(run, target);
@@ -338,14 +339,14 @@ public:
 
 	void primprovement(state last, VectorXd target)
 	{
-		VectorXd run = last.norm();
+		VectorXd run = (&last)->norm();
 	
 		// cout << "in " << run.transpose() << endl;
 		// cout << "target " << target.transpose() << endl;
 		if (PR) {
 			PRMatr.col(0) = run;
 			PRTarget.col(0) = target;
-			actionValues.prBackpropagation(PRMatr, PRactivations, PRTarget, 0.00001);
+			actionValues.prBackpropagation(PRMatr, PRactivations, PRTarget, 0.0001);
 		}
 		else {
 			actionValues.backpropagation(run, target);
@@ -495,7 +496,7 @@ public:
 		stepTime = clock();
 
 		VectorXd target(actionsNum);
-		VectorXd oldValues = actionValues.run(currentState.norm());
+		VectorXd oldValues = actionValues.run((&currentState)->norm());
 		target = oldValues; // to not relearn values of actions not done
 
 		state last = currentState; // save state was current on the enering evaluation function
@@ -636,7 +637,7 @@ public:
 	{
 		VectorXd res = VectorXd::Zero(actionsNum);
 		state st = env->actions[buf].to;
-		res[buf] = actionValues.run(st.norm()).maxCoeff();
+		res[buf] = actionValues.run((&st)->norm()).maxCoeff();
 
 		return res;
 	}

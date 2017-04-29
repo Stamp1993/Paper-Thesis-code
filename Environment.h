@@ -18,7 +18,7 @@ struct state {//two element pair for state allocation and its value
 		num = nums;
 		nums++;
 		value = VectorXd(a);
-		info = VectorXd(12);
+		info = VectorXd(18);
 	}
 
 	state(int a, bool f) {
@@ -26,21 +26,21 @@ struct state {//two element pair for state allocation and its value
 		nums++;
 		value = VectorXd(a);
 		failed = true;
-		info = VectorXd(12);
+		info = VectorXd(18);
 	}
 
 	state(VectorXd vals) : value(vals) {
 		num = nums;
 		nums++;
-		info = VectorXd(12);
+		info = VectorXd(18);
 	}
 
 	state() {
 		num = nums;
 		nums++;
-		value = VectorXd(1);
-		value << 0;
-		info = VectorXd(12);
+		value = VectorXd(6);
+		value.Zero(6);
+		info = VectorXd(18);
 	}
 	state(const state &oth) : num(oth.num) {
 		value = oth.value;
@@ -48,6 +48,17 @@ struct state {//two element pair for state allocation and its value
 		info = oth.info;
 	}
 
+	virtual VectorXd norm() {
+        	VectorXd res = value;
+			for (int i = 1; i < 6; i++) {
+				res[i] = res[i] / 20;
+			}
+			for (int i = 6; i < 18; i++) {
+				res[i] = res[i] / 60;
+			}
+
+		return res;
+	}
 
 
 };
@@ -76,6 +87,8 @@ protected:
 
 
 public:
+const double angLim = 50.000; // degrees
+	const double gravAcc = 9.81;
 	state current;
 	vector<action> actions;
 	environment(int sz) {
@@ -116,6 +129,8 @@ public:
 		return sta.failed;
 	}
 
+	
+
 	bool won(state st) {
 		return 0;
 	}
@@ -131,15 +146,15 @@ class cart_pole : public environment {
 	const double cartM;
 	const double pole1L;
 	const double pole1M;
-	/*const double pole2L;
-	const double pole2M;*/
+	const double pole2L;
+	const double pole2M;
 	const double punch;
 	const double track;
 	const double angLim = 50.000; // degrees
 	const double gravAcc = 9.81; //m / sq sec.
 	double time = 0;
 	const double poleFailAng;
-	double timestep = 0.05;
+	double timestep = 0.02;
 
 public:
 	struct pole_state : public state {
@@ -149,17 +164,26 @@ public:
 		double angle1;
 		double angVel1;
 		double angAcc1;
-		/*double angle2;
+		double angle2;
 		double angVel2;
-		double angAcc2;*/
+		double angAcc2;
 		//bool failed = false;
 
-		pole_state() :state(4), pos(0), vel(0), acc(0), angle1(0), angVel1(0), angAcc1(0)/*, angle2(0), angVel2(0), angAcc2(0)*/ {
-			angle1 += noise();//pole should start falling
-							  //	angle2 -= noise();//pole should start falling
-			value = VectorXd::Zero(4);
-			info = VectorXd::Zero(12);
+		pole_state() :state(18), pos(0), vel(0), acc(0), angle1(0), angVel1(0), angAcc1(0), angle2(0), angVel2(0), angAcc2(0) {
+            pos += noise();
+            vel +=noise();
+            acc+=noise();
+			angle1 += noise()*5+1;//pole should start falling
+			angle2 += noise()*5-1;//pole should start falling
+            angVel1 +=noise()*5;
+            angVel2+=noise()*5;
+            angAcc1+=noise()*5;
+            angAcc2+=noise()*5;
+			//value = VectorXd::Zero(6);
+			info = VectorXd::Zero(18);
+			
 			makeVal();
+			value = info;
 		}
 
 		void makeVal() {
@@ -204,55 +228,81 @@ public:
 			else {
 				info(11) = -angAcc1;
 			}
-			/*	if (angle2 > 0) {
-			value(12) = angle2;
+			if (angle2 > 0) {
+				value(4) = angle2;
+				info(12) = angle2;
 			}
 			else {
-			value(13) = angle2;
+				value(5) = angle2;
+				info(13) = angle2;
 			}
 			if (angVel2 > 0) {
-			value(14) = angVel2;
+				info(14) = angVel2;
 			}
 			else {
-			value(15) = angVel2;
+				info(15) = angVel2;
 			}
 
 			if (angAcc2 > 0) {
-			value(16) = angAcc2;
+				info(16) = angAcc2;
 			}
 			else {
-			value(17) = angAcc2;*/
-
+				info(17) = angAcc2;
+			}
 
 		}
 
-		pole_state(bool f) : state(4, true), pos(0), vel(0), angle1(0), angVel1(0), angAcc1(0) /*angle2(0), angVel2(0), angAcc2(0)*/ {
-			angle1 += noise();//pole should start falling
-							  //angle2 -= noise();
-			value = VectorXd::Zero(4);
-			info = VectorXd::Zero(12);
+		pole_state(bool f) : pole_state() {
+            failed = true;
+			 pos += noise();
+            vel +=noise();
+            acc+=noise();
+			angle1 += noise()*5;//pole should start falling
+			angle2 += noise()*5;//pole should start falling
+            angVel1 +=noise()*5;
+            angVel2+=noise()*5;
+            angAcc1+=noise()*5;
+            angAcc2+=noise()*5;
+			
+			info = VectorXd::Zero(18);
 			makeVal();
+			value = info;
 		}
 
-		pole_state(double posIn, double velIn, double accIn, double angleIn1, double angVelIn1, double angAccIn1/*, double angleIn2, double angVelIn2, double angAccIn2*/)
-			: state(4), pos(posIn), vel(velIn), acc(accIn), angle1(angleIn1), angVel1(angVelIn1), angAcc1(angAccIn1)/*, angle2(angleIn2), angVel2(angVelIn2), angAcc2(angAccIn2) */ {
+		pole_state(double posIn, double velIn, double accIn, double angleIn1, double angVelIn1, double angAccIn1, double angleIn2, double angVelIn2, double angAccIn2)
+			: state(18), pos(posIn), vel(velIn), acc(accIn), angle1(angleIn1), angVel1(angVelIn1), angAcc1(angAccIn1), angle2(angleIn2), angVel2(angVelIn2), angAcc2(angAccIn2)  {
 
-			value = VectorXd::Zero(4);
-			info = VectorXd::Zero(12);
+			
+			info = VectorXd::Zero(18);
 			makeVal();
-			//	cout << value.transpose() << endl;
+			value = info;
+			//cout << value.transpose() << endl;
 		}
 
 
 
 
-		pole_state(const pole_state &oth) : state(4), pos(oth.pos), vel(oth.vel), acc(oth.acc), angle1(oth.angle1), angVel1(oth.angVel1), angAcc1(oth.angAcc1)/*, angle2(oth.angle2), angVel2(oth.angVel2), angAcc2(oth.angAcc2)*/ {
+		pole_state(const pole_state &oth) : pole_state( oth.pos, oth.vel, oth.acc, oth.angle1, oth.angVel1, oth.angAcc1, oth.angle2, oth.angVel2, oth.angAcc2) {
+            failed = oth.failed;
 			//copy constructor
 			//	cout << "copy" << endl;
-			value = VectorXd::Zero(4);
-			info = VectorXd::Zero(12);
+			
+			info = VectorXd::Zero(18);
 			makeVal();
+			value = info;
 			failed = oth.failed;
+		}
+
+		VectorXd norm() {
+			VectorXd res = value;
+			for (int i = 1; i < 6; i++) {
+				res[i] = res[i] / 20;
+			}
+			for (int i = 6; i < 18; i++) {
+				res[i] = res[i] / 60;
+			}
+
+			return res;
 		}
 
 	};
@@ -285,51 +335,56 @@ public:
 		time += timestep;
 		state* curr = in;
 		state currentState = *curr;
+         double pi = acos(-1);
 		double pos = currentState.info[0] + currentState.info[1];
 		double vel = currentState.info[2] + currentState.info[3];
 		double acc = currentState.info[4] + currentState.info[5];
-		double angle1 = currentState.info[6] + currentState.info[7];
-		double angVel1 = currentState.info[8] + currentState.info[9];
-		double angAcc1 = currentState.info[10] + currentState.info[11];
+		double angle1 = (currentState.info[6] + currentState.info[7])*pi/180;
+		double angVel1 = (currentState.info[8] + currentState.info[9])*pi/180;
+		double angAcc1 = (currentState.info[10] + currentState.info[11])*pi/180;
 		//cout << "state " << pos << " " << vel << " " << angle1 << endl;
-		/*double angle2 = currentState.value[6];
-		double angVel2 = currentState.value[7];
-		double angAcc2 = currentState.value[8];*/
-		double cosAn1, sinAn1, temp1/*, cosAn2, sinAn2, temp2*/;
+		double angle2 = 0; //(currentState.info[12]+currentState.info[13])*pi/180;
+		double angVel2 = 0;//(currentState.info[14]+currentState.info[15])*pi/180;
+		double angAcc2 = 0; //(currentState.info[16]+currentState.info[17])*pi/180;
+		double cosAn1, sinAn1, temp1, cosAn2, sinAn2, temp2;
 		double punchDone = (dir == push_left) ? (-punch) : ((dir == push_right) ? punch : 0);
-
+       // cout << "dir" << dir << endl;
 		//cout << "inside step " << currentState.value.transpose() << endl;
+       
 		cosAn1 = cos(angle1);
 		sinAn1 = sin(angle1);
-		/*	cosAn2 = cos(angle2);
-		sinAn2 = sin(angle2);*/
+		cosAn2 = cos(angle2);
+		sinAn2 = sin(angle2);
+        double poleFric = 2*pow(10, -6);//friction
+        double cartFric = 5*pow(10, -4);
+		double tempMul1 = 2*pole1M*pole1L*angVel1*angVel1*sinAn1 + (3.0/4.0)*pole1M*cosAn1*((poleFric*angVel1)/(pole1M*pole1L) +gravAcc*sinAn1 );//effective force
+        double tempMul2 = 0; //2*pole2M*pole2L*angVel2*angVel2*sinAn2 + (3.0/4.0)*pole2M*cosAn2*((poleFric*angVel2)/(pole2M*pole2L) +gravAcc*sinAn2 );
+        
+        double tempDev1 = pole1M*(1 - (3.0/4.0)*cosAn1*cosAn1);
+        double tempDev2 = 0;//pole2M*(1 - (3.0/4.0)*cosAn2*cosAn2);
+        int sing = (vel>0)?1:(vel<0)?-1:0;
+		acc = (punchDone - cartFric*sing + tempMul1 + tempMul2)/(cartM + tempDev1 + tempDev2);
+        
+		angAcc1 = -(3.0/(4.0*pole1L))*(acc*cosAn1 + gravAcc*sinAn1 + (poleFric*angVel1)/(pole1M*pole1L));
+        angAcc2 = 0;//-(3.0/(4.0*pole2L))*(acc*cosAn2 + gravAcc*sinAn2 + (poleFric*angVel2)/(pole2M*pole2L));
 
-		temp1 = (punchDone + pole1M*pole1L * angVel1 * angVel1 * sinAn1)
-			/ (pole1M +/* pole2M*/ +cartM);
 
-		/*temp2 = (punchDone + pole2M*pole2L * angVel2 * angVel2 * sinAn2)
-		/ (pole1M + pole2M + cartM);*/
-
-		angAcc1 = (gravAcc * sinAn1 - cosAn1 * temp1)
-			/ (pole1L * ((4.0 / 3.0) - pole1M * cosAn1 * cosAn1
-				/ (pole1M + /*pole2M */+cartM)));
-
-		/*angAcc2 = (gravAcc * sinAn2 - cosAn2 * temp2)
-		/ (pole2L * ((4.0 / 3.0) - pole2M * cosAn2 * cosAn2
-		/ (pole1M + pole2M + cartM)));*/
-
-		acc = (punchDone + pole1M*pole1L*((angVel1*angVel1)*sinAn1 - angAcc1*cosAn1) /*+pole2M*pole2L*((angVel2*angVel2)*sinAn2 - angAcc1*cosAn2)*/) / (pole1M +/* pole2M */+cartM);
+		
 
 		/*** Update the four state variables, using Euler's method. ***/
 
 		pos += timestep * vel;
 		vel += timestep * acc;
 		angle1 += timestep * angVel1;
+        angle1 = angle1*180/pi;
 		angVel1 += timestep * angAcc1;
-		/*angle2 += timestep * angVel2;
-		angVel2 += timestep * angAcc2;*/
+        angVel1 = angVel1*180/pi;
+		angle2 += timestep * angVel2;
+        angle2 = 0;//angle2*180/pi;
+		angVel2 += timestep * angAcc2;
+        angVel2 = 0;//angVel2*180/pi;
 		pole_state res;
-		if ((abs(angle1) > poleFailAng)/* || (abs(angle2) > poleFailAng)*/ || abs(pos)>track) {
+		if ((abs(angle1) > poleFailAng) || (abs(angle2) > poleFailAng) || abs(pos) > track) {
 			res = pole_state(true);
 			// cout << "must stop here!!!" << endl;
 
@@ -338,7 +393,7 @@ public:
 
 		}
 		else {
-			res = pole_state(pos, vel, acc, angle1, angVel1, angAcc1/*, angle2, angVel2, angAcc2*/);
+			res = pole_state(pos, vel, acc, angle1, angVel1, angAcc1*180/pi, angle2, angVel2, angAcc2*180/pi);
 
 		}
 		//cout << inside timestep" << endl;
@@ -351,14 +406,14 @@ public:
 	}
 
 	cart_pole(double cM, double p1M, double p2M, double pch, double p1L, double p2L, double tr, double pfr) :
-		cartM(cM), pole1M(p1M), /*pole2M(p2M), */punch(pch),
-		pole1L(p1L), /*pole2L(p2L),*/ track(tr), poleFailAng(pfr) {
+		cartM(cM), pole1M(p1M), pole2M(p2M), punch(pch),
+		pole1L(p1L), pole2L(p2L), track(tr), poleFailAng(pfr) {
 		current = pole_state();
 		init_actions();
 	}
 
-	cart_pole(cart_pole &oth) :cartM(oth.cartM), pole1M(oth.pole1M), /*pole2M(oth.pole2M), */punch(oth.punch),
-		pole1L(oth.pole1L),/* pole2L(oth.pole2L), */track(oth.track), poleFailAng(oth.poleFailAng) {
+	cart_pole(cart_pole &oth) :cartM(oth.cartM), pole1M(oth.pole1M), pole2M(oth.pole2M), punch(oth.punch),
+		pole1L(oth.pole1L), pole2L(oth.pole2L), track(oth.track), poleFailAng(oth.poleFailAng) {
 		current = pole_state();
 		init_actions();
 	}
