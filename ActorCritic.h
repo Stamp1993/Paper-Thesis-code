@@ -1,14 +1,14 @@
 #pragma once
 #include"agent.h"
 
-class acAgent : public qAgent{
+class acAgent : public qAgent {
 	//state currentState;
 	//state oldState;
 	//neuralNetwork actor; we have actionValues instead
 
 public:
-	 MatrixXd PolPRMatr;
-     MatrixXd PolPRTarget;
+	MatrixXd PolPRMatr;
+	MatrixXd PolPRTarget;
 
 	acAgent(int sz, state curSt, double LR, double DF, environment* e) : qAgent(sz, curSt, LR, DF, softmax, e)
 	{ // constr
@@ -20,28 +20,28 @@ public:
 		currentMoveType = softmax;
 		PR = false;
 	}
-    
-    vector<vector<VectorXd> > polPRactivations;
-    
-    MatrixXd makePolPR(int ps)
+
+	vector<vector<VectorXd> > polPRactivations;
+
+	MatrixXd makePolPR(int ps)
 	{
 		PolPRMatr = classicPR(ps, (*policy.inputs));
 		polPRactivations = policy.activationsRun(PolPRMatr);
 		PolPRTarget = policy.batchRun(PolPRMatr);
 		return PolPRMatr;
 	}
-    
-	
+
+
 	void policyImprovement(state last, VectorXd target)
 	{
 		VectorXd run = last.norm();
-		
+
 		// cout << "in " << run.transpose() << endl;
 		// cout << "target " << target.transpose() << endl;
 		if (PR) {
 			PolPRMatr.col(0) = run;
 			PolPRTarget.col(0) = target;
-			policy.batchBackpropagation(PolPRMatr, PolPRTarget, 0.0000001);
+			policy.batchBackpropagation(PolPRMatr, PolPRTarget, 0.0001);
 		}
 		else {
 			policy.backpropagation(run, target);
@@ -51,26 +51,26 @@ public:
 	void policyPRimprovement(state last, VectorXd target)
 	{
 		VectorXd run = last.norm();
-		
-		
+
+
 		// cout << "in " << run.transpose() << endl;
 		// cout << "target " << target.transpose() << endl;
 		if (PR) {
 			PolPRMatr.col(0) = run;
 			PolPRTarget.col(0) = target;
-			policy.prBackpropagation(PolPRMatr, polPRactivations, PolPRTarget, 0.0000001);
+			policy.prBackpropagation(PolPRMatr, polPRactivations, PolPRTarget, 0.0001);
 		}
 		else {
 			policy.backpropagation(run, target);
 		}
 	}
 
-	void acLearn(int PRSz, int inrelearn, bool fr,  int len, int avgs, string fileout)
+	void acLearn(int PRSz, int inrelearn, bool fr, int len, int avgs, string fileout)
 	{
-        policy.learningRate = policy.learningRate/70;
-        PRsize = PRSz;
-        cout << "init" << endl;
-       
+		policy.learningRate = policy.learningRate / 50;
+		PRsize = PRSz;
+		cout << "init" << endl;
+
 		srand(runs*steps);
 		FreanRobins = fr;
 		ofstream fout;
@@ -83,21 +83,21 @@ public:
 			learn();
 			relearn = inrelearn;
 			if (PRsize != 0) {
-            PR = true;
-        }
-        else{
-            PR = false;
-        }
-				if(PR){
-                    cout << "make pr " << endl;
-					makePR(PRsize);
-                    cout << "make pol pr" << endl;
-                    makePolPR(PRsize);
-                    cout << "done" << endl;
-				}
-                
+				PR = true;
+			}
+			else {
+				PR = false;
+			}
+			if (PR) {
+				cout << "make pr " << endl;
+				makePR(PRsize);
+				cout << "make pol pr" << endl;
+				makePolPR(PRsize);
+				cout << "done" << endl;
+			}
+
 			for (int i = 0; i < len; i++) {
-                 
+
 				while (learn() != -1) {
 				}
 				stepVec[i] += steps;
@@ -120,9 +120,11 @@ public:
 			fout << "episode time "
 				<< ";" << etVec[i] / avgs << ";";
 			fout << " epsilon steps "
-				<< ";" << esVec[i] / avgs << endl;
+				<< ";" << esVec[i] / avgs << ";";
+			fout << "free fall "
+				<< ";" << 83 << endl;
 		}
-       
+
 
 		fout.close();
 	}
@@ -130,14 +132,14 @@ public:
 
 	int learn()
 	{
-        int oldRew = 0;
+		int oldRew = 0;
 		if (steps == 0) {
 			startTime = clock();
 			current_time.clear();
 		}
 		stepTime = clock();
 
-		
+
 		VectorXd target(actionsNum); //last state
 		VectorXd oldValues = actionValues.run(currentState.norm());
 		target = oldValues; // to not relearn values of actions not done
@@ -152,26 +154,26 @@ public:
 
 		double rew = move(); // policy move and save reward
 		int done = buf; // save last action done
-        VectorXd newValues = actionValues.run(currentState.norm());
-        VectorXd newPolicy = policy.run(currentState.norm());
+		VectorXd newValues = actionValues.run(currentState.norm());
+		VectorXd newPolicy = policy.run(currentState.norm());
 
 		state alloc = currentState; // save value of cell we came to
-		target[done] = rew+oldRew;
+		target[done] = rew + oldRew;
 		//policytarget[done] = 0;
-        //conditioning for eval
-		if (env->isFinal(alloc) || steps == 50000) { // if finished episode
+		//conditioning for eval
+		if (env->isFinal(alloc) || steps == 5000) { // if finished episode
 
 			if (PRsize != 0) {
 				if (relearn == -1) {
 					cout << "make PR!" << endl;
 					makePR(PRsize);
-                    makePolPR(PRsize);
+					makePolPR(PRsize);
 				}
 				else if (relearn != 0) {
 					if (PR && runs % relearn == 0) {
 						cout << "make PR!" << endl;
 						makePR(PRsize);
-                        makePolPR(PRsize);
+						makePolPR(PRsize);
 					}
 				}
 			}
@@ -194,13 +196,13 @@ public:
 
 			runs++;
 			target[done] = (discountingFactor*target[done] - oldValues[oldAct]);// gamma*reward - q(oldstate, oldAct)
-            double td = target[done];
+			double td = target[done];
 
 			/*if (runs > 800) {
 			cout << "target" << target << endl;
 			}*/
 			if (FreanRobins) {
-                target[done] = target[done] + newValues[done];
+				target[done] = target[done] + newValues[done];
 				primprovement(last, target);
 			}
 			else if (PR) {
@@ -208,16 +210,16 @@ public:
 				improvement(last, target);
 			}
 			else {
-                target[done] = target[done] + newValues[done];
+				target[done] = target[done] + newValues[done];
 				improvement(last, target);
 			}
 
 			policytarget[done] = td;
-           
-			
+
+
 
 			if (FreanRobins) {
-                policytarget[done] = policytarget[done] + (oldPolicy[done]);
+				policytarget[done] = policytarget[done] + (oldPolicy[done]);
 				policyPRimprovement(last, policytarget);//stochastic - only update
 			}
 			else if (PR) {
@@ -225,15 +227,15 @@ public:
 				improvement(last, policytarget);
 			}
 			else {
-                policytarget[done] = policytarget[done] + (oldPolicy[done]);
+				policytarget[done] = policytarget[done] + (oldPolicy[done]);
 				improvement(last, policytarget);
 			}
 
-			
+
 			// system("pause");
-			if (steps >= 50000) {
+			if (steps >= 5000) {
 				env->makeFinal();
-                oldRew = 1;//success!
+				oldRew = 1;//success!
 			}
 
 			//TODO: //policy things
@@ -247,16 +249,16 @@ public:
 			VectorXd res = discountingFactor * actionValues.run(currentState.norm());
 
 			target[done] = (target[done] + res[done] - oldValues[oldAct]);
-            double td = target[done];
-           
-																		 // reward is 0 here, but it will be useful in
-																		 // other problems
-																		 /*if (runs > 800) {
-																		 cout << "target" << target << endl;
-																		 }*/
-																		 /*target = target / 3;*/
+			double td = target[done];
+
+			// reward is 0 here, but it will be useful in
+			// other problems
+			/*if (runs > 800) {
+			cout << "target" << target << endl;
+			}*/
+			/*target = target / 3;*/
 			if (FreanRobins) {
-                target[done] = target[done] + oldValues[done];
+				target[done] = target[done] + oldValues[done];
 				primprovement(last, target);
 			}
 			else if (PR) {
@@ -264,17 +266,17 @@ public:
 				improvement(last, target);
 			}
 			else {
-                target[done] = target[done] + oldValues[done];
+				target[done] = target[done] + oldValues[done];
 				improvement(last, target);
 			}
 
 			oldValues = actionValues.run(last.norm());
-			
-            
+
+
 			policytarget[done] = td;
 
 			if (FreanRobins) {
-                policytarget[done] = policytarget[done]  + (newPolicy[done]);
+				policytarget[done] = policytarget[done] + (newPolicy[done]);
 				policyPRimprovement(last, policytarget);
 			}
 			else if (PR) {
@@ -282,7 +284,7 @@ public:
 				improvement(last, policytarget);
 			}
 			else {
-                policytarget[done] = policytarget[done] + (newPolicy[done]);
+				policytarget[done] = policytarget[done] + (newPolicy[done]);
 				improvement(last, policytarget);
 			}
 
@@ -319,6 +321,6 @@ public:
 
 		return res;
 	}
-	
+
 
 };

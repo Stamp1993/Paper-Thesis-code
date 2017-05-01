@@ -25,9 +25,9 @@ public:
 	vector<double> current_time;
 	double startTime, stepTime;
 	MatrixXd PRMatr;
-   
+
 	MatrixXd PRTarget;
-   
+
 	bool PR = false; // if we use pseudorehearsals
 	int PRsize = 0;
 	bool max = true;
@@ -82,7 +82,7 @@ public:
 	int actionsNum;
 	state* pointerToState = new state();
 	state currentState = *pointerToState;
-	double temperature = 0.2; // for softmax
+	double temperature = 1; // for softmax
 	action* last;
 	bool learned = false;
 	int epsilons = 0;
@@ -110,7 +110,7 @@ public:
 	}
 
 	agent(const agent &oth) : agent(oth.size, oth.currentState, oth.learningRate, oth.discountingFactor,
-		oth.currentMoveType, oth.env){
+		oth.currentMoveType, oth.env) {
 		actionValues = oth.actionValues;
 		policy = oth.policy;
 	}
@@ -180,7 +180,7 @@ public:
 	{
 
 		VectorXd current = actionValues.run((&currentState)->norm()); // take entity from policies for current state
-																 // cout << "predict vec " << current.transpose() << endl;
+																	  // cout << "predict vec " << current.transpose() << endl;
 		state old = currentState;
 
 		double max = current[0]; // choose highest valued action, initially - zeroes
@@ -231,7 +231,7 @@ public:
 	{ // policy based
 		double chance = gamble();
 		VectorXd current = policy.run((&currentState)->norm()); // take entity from policies for current state
-														   // cout << "predict vec " << current.transpose() << endl;
+																// cout << "predict vec " << current.transpose() << endl;
 		state old = currentState;
 
 		double max = current[0]; // choose highest valued action, initially - zeroes
@@ -286,7 +286,7 @@ public:
 		return env->reward();
 	}
 
-//	int steps = 0;
+	//	int steps = 0;
 
 	virtual int learn()
 	{
@@ -306,25 +306,25 @@ public:
 
 class qAgent : public agent
 {
-	
+
 
 public:
-	
+
 
 	qAgent(int sz, state curSt, double LR, double DF, int mt, environment* e) : agent(sz, curSt, LR, DF, mt, e)
-	{ 
+	{
 	}
 
 	qAgent(const qAgent& oth) : agent(oth)
-	{ 
+	{
 	}
 
-	
+
 
 	void improvement(state last, VectorXd target)
 	{
 		VectorXd run = (&last)->norm();
-	
+
 		// cout << "in " << run.transpose() << endl;
 		// cout << "target " << target.transpose() << endl;
 		if (PR) {
@@ -340,7 +340,7 @@ public:
 	void primprovement(state last, VectorXd target)
 	{
 		VectorXd run = (&last)->norm();
-	
+
 		// cout << "in " << run.transpose() << endl;
 		// cout << "target " << target.transpose() << endl;
 		if (PR) {
@@ -354,14 +354,14 @@ public:
 	}
 	bool FreanRobins;
 
-	void qLearn(string fileout){//random
+	void qLearn(string fileout) {//random
 		ofstream fout;
 		fout.open(fileout);
 		VectorXd stepVec = VectorXd::Zero(5000);
 		VectorXd etVec = VectorXd::Zero(5000);
 		VectorXd esVec = VectorXd::Zero(5000);
 		for (int iter = 0; iter < 1; iter++) {
-			
+
 			for (int i = 0; i < 5000; i++) {
 
 				while (randrun() != -1) {
@@ -444,9 +444,9 @@ public:
 		}
 		stepTime = clock();
 
-	
+
 		state last = currentState; // save state was current on the enering evaluation function
-	
+
 
 		double rew = randomMove(); // move and save reward
 		int done = buf; // save last action done
@@ -454,7 +454,7 @@ public:
 
 		if (env->isFinal(alloc)) { // if finished episode
 
-			
+
 			steps++;
 			avgSteps = steps;
 			startTime = clock() - startTime;
@@ -472,7 +472,7 @@ public:
 
 
 			runs++;
-			
+
 			if (steps >= 3000) {
 				env->makeFinal();
 			}
@@ -502,9 +502,9 @@ public:
 		state last = currentState; // save state was current on the enering evaluation function
 		VectorXd Q(actionsNum);
 
-		
-			Q = maxQ();
-		
+
+		Q = maxQ();
+
 		double rew = move(); // move and save reward
 		int done = buf; // save last action done
 		state alloc = currentState; // save value of cell we came to
